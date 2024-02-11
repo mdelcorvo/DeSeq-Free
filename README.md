@@ -1,4 +1,4 @@
-# DeSeq-Free <img src="img/DeSeq-Free_logo.tif" width="200" align="right" />
+# DeSeq-Free <img src="img/DeSeq-Free_logo.png" width="200" align="right" />
 
 **DeSeq-Free** (Whole genome **De**ep **Seq**uencing analysis of Cell **Free** DNA ) is a [Snakemake workflow](https://snakemake.readthedocs.io/en/stable/index.html), 
 aimed to analyze WGS of circulating cell-free DNA (cfDNA) in the plasma of cancer patients in a reproducible, automated, and partially contained manner. 
