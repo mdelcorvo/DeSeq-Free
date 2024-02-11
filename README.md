@@ -23,7 +23,7 @@ In order to ease the use of DeSeq-Free, we provide a yml file for conda with all
 ```
 To use DeSeq-Free:
 
-git clone https://github.com/dimadatascience/DeSeq-Free.git
+git clone https://github.com/mdelcorvo/DeSeq-Free.git
 cd DeSeq-Free && conda env create -f envs/workflow.yaml
 conda activate DeSeq-Free_workflow
 
