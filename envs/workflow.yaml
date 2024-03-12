@@ -1,0 +1,55 @@
+name: snHiChIP_workflow
+channels:
+  - conda-forge
+  - bioconda
+  - bioconda/label/broken
+  - anaconda
+  - jrhawley
+  - defaults
+dependencies:
+  - conda-forge::python=3.8.10=h49503c6_1_cpython
+  - conda-forge::scipy=1.7.0=py38h7b17777_1
+  - conda-forge::numpy==1.22.4
+  - conda-forge::gzip
+  - conda-forge::tbb=2020.2=hc9558a2_0
+  - anaconda::cython
+  - conda-forge::urllib3==1.26.18
+  - conda-forge::r-base=4.0.3=h349a78a_8
+  - conda-forge::r-ggplot2=3.3.5=r40hc72bb7e_0
+  - conda-forge::r-rcolorbrewer=1.1_2=r40h785f33e_1003
+  - conda-forge::r-gridbase=0.4_7=r40hc72bb7e_1003
+  - conda-forge::r-optparse
+  - conda-forge::r-data.table
+  - conda-forge::r-splines2
+  - conda-forge::r-plyr
+  - conda-forge::r-dplyr
+  - conda-forge::openjdk
+  - r-fdrtool
+  - bioconda::bioconductor-genomicranges
+  - bioconda::bioconductor-edger
+
+  - bioconda::snakemake
+  - bioconda::snakemake-wrapper-utils
+  - bioconda::bwa
+  - bioconda::bowtie2=2.4.4=py38h72fc82f_0
+  - bioconda::samtools=1.12=h9aed4be_1
+  - bioconda::bedtools
+  - bioconda::deeptools
+  - bioconda::macs2
+  - bioconda::pairtools
+  - bioconda::fastp
+  - bioconda::mosdepth
+  - bioconda::iced=0.5.10=py38h803c66d_0
+  - bioconda::bx-python=0.8.11=py38h024e602_1
+  - bioconda::pysam
+  - bioconda::cooler=0.9.3
+  
+  - jrhawley::hic-straw
+  - anaconda::networkx
+  - tabulate
+  - py2bit
+  - matplotlib
+  - pybigwig
+  - pandas
+  - lz4
+  - xlsxwriter

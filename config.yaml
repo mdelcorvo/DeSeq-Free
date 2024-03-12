@@ -1,0 +1,44 @@
+#################
+# MAIN parameters
+#################
+meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
+
+output: /data/delcorvo/analysis/pelicci/GBM #Set the OUTPUT directory
+tmpdir: /data/delcorvo/analysis/tmp # Set a temporary folder
+ncores: 32 # Number of cores
+##################
+
+##################
+genome_data: /data/delcorvo/benchmarking/seqc2/ref
+dbsnp: /data/delcorvo/tools/dbsnp138.vcf.gz
+dbsnp_tbi: /data/delcorvo/tools/dbsnp138.vcf.gz.tbi
+##################
+
+#######################################
+# Internal parameters (do not change..)
+#######################################
+derived_data: derived_data
+final_data: final_data
+metadata: docs
+logs: derived_data/logs
+benchmarks: derived_data/benchmarks
+##################
+
+params:
+  trimmomatic:
+      pe:
+        trimmer:
+          # See trimmomatic manual for adding additional options, e.g. for adapter trimming.
+          - "LEADING:30"
+          - "TRAILING:30"
+          - "SLIDINGWINDOW:4:30"
+          - "MINLEN:35"
+          - "TOPHRED33"
+      se:
+        trimmer:
+          # See trimmomatic manual for adding additional options, e.g. for adapter trimming.
+          - "LEADING:30"
+          - "TRAILING:30"
+          - "SLIDINGWINDOW:4:30"
+          - "MINLEN:35"
+          - "TOPHRED33"
