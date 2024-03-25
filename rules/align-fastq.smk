@@ -18,8 +18,8 @@ rule trimmomatic_pe:
     input:
         unpack(get_fastq)
     output:
-        r1=temp(f'{derived}/pre_processing/temp/{{id}}.R1.fastq.gz'),
-        r2=temp(f'{derived}/pre_processing/temp/{{id}}.R2.fastq.gz'),
+        r1=f'{derived}/pre_processing/temp/{{id}}.R1.fastq.gz',
+        r2=f'{derived}/pre_processing/temp/{{id}}.R2.fastq.gz',
         r1_unpaired=temp(f'{derived}/pre_processing/unpaired/{{id}}.R1.fastq.gz'),
         r2_unpaired=temp(f'{derived}/pre_processing/unpaired/{{id}}.R2.fastq.gz'),
     log: f'{logs}/{{id}}/01_trimmomatic.log'
@@ -37,7 +37,7 @@ rule fastx_trimmer:
     input:
         unpack(get_trimmed)
     output:
-        temp(f'{derived}/pre_processing/{{id}}.fastq.gz')
+        f'{derived}/pre_processing/{{id}}.fastq.gz'
     log: f'{logs}/{{id}}/02_fastx_trimmer.log'
     benchmark: f'{benchmarks}/{{id}}_fastx_trimmer.txt'
     threads: 1
@@ -53,8 +53,8 @@ rule fastx_trimmer_pe:
     input:
         unpack(get_trimmed)
     output:
-        r1=temp(f'{derived}/pre_processing/{{id}}.R1.fastq.gz'),
-        r2=temp(f'{derived}/pre_processing/{{id}}.R2.fastq.gz'),
+        r1=f'{derived}/pre_processing/{{id}}.R1.fastq.gz',
+        r2=f'{derived}/pre_processing/{{id}}.R2.fastq.gz',
     log: f'{logs}/{{id}}/02_fastx_trimmer.log'
     benchmark: f'{benchmarks}/{{id}}_fastx_trimmer.txt'
     threads: 1
@@ -248,3 +248,19 @@ rule gatk_applybqsr:
         mem_mb=4096,
     wrapper:
         "v3.4.1/bio/gatk/applybqsr"
+
+rule samtools_index:
+    input:
+        bam=f'{derived}/recal/{{sample_type}}.bam'
+    output:
+        bai=f'{derived}/recal/{{sample_type}}.bam.bai'
+    log: f'{logs}/{{sample_type}}/samtools_index.log'
+    benchmark: f'{benchmarks}/{{sample_type}}.samtools_index.txt'
+    threads: 1
+    priority: 40
+    shell:
+        """
+
+        samtools index {input.bam}
+
+        """

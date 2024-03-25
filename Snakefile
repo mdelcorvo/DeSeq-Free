@@ -6,12 +6,18 @@
 
 ##### Modules #####
 include: "rules/common.smk"
+include: "rules/qc.smk"
 include: "rules/align-fastq.smk"
-include: "rules/align-fastq_after_merge.smk"
+include: "rules/cna.smk"
+include: "rules/variants_analysis.smk"
+#include: "rules/align-fastq_after_merge.smk"
 
 
 rule all:
    input:
-       expand(f'{derived}/recal/{{sample_type}}.bam',sample_type=s1["sample_type"]),
-       expand(f'{derived}/recal/{{sample_type}}.notCombined.final.bam',sample_type=s1[s1["type"]=='plasma']['sample_type']),
-       expand(f'{derived}/recal/{{sample_type}}.extendedFrags.final.bam',sample_type=s1[s1["type"]=='plasma']['sample_type'])
+       expand(f'{derived}/cna/{{sample_type}}.cna.seg',sample_type=s1[s1["type"]=='plasma']['sample_type']),
+       expand(f'{derived}/cna/{{sample_type}}.cna.seg',sample_type=s1[s1["type"]== 'tumor']['sample_type']),
+       expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
+       expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"]),
+       expand(f'{derived}/variant_calling/{{sample_calling}}-plasma.snp',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/{{sample_calling}}-tumor.snp',sample_calling=s2["sample"])

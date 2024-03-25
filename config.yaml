@@ -3,15 +3,15 @@
 #################
 meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
 
-output: /data/delcorvo/analysis/pelicci/GBM #Set the OUTPUT directory
-tmpdir: /data/delcorvo/analysis/tmp # Set a temporary folder
-ncores: 32 # Number of cores
+output: /hpcnfs/scratch/DIMA/delcorvo/analysis/PelicciG/GBM #Set the OUTPUT directory
+tmpdir: /hpcnfs/scratch/DIMA/delcorvo/pipelines/tmp # Set a temporary folder
+ncores: 24 # Number of cores
 ##################
 
 ##################
-genome_data: /data/delcorvo/benchmarking/seqc2/ref
-dbsnp: /data/delcorvo/tools/dbsnp138.vcf.gz
-dbsnp_tbi: /data/delcorvo/tools/dbsnp138.vcf.gz.tbi
+genome_data: /hpcnfs/data/DIMA/delcorvo/benchmarking/seqc2/ref
+dbsnp: /hpcnfs/data/DIMA/delcorvo/benchmarking/hsapiens/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz
+dbsnp_tbi: /hpcnfs/data/DIMA/delcorvo/benchmarking/hsapiens/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi
 ##################
 
 #######################################
@@ -23,6 +23,10 @@ metadata: docs
 logs: derived_data/logs
 benchmarks: derived_data/benchmarks
 ##################
+
+########################
+## trimmomatic params ##
+########################
 
 params:
   trimmomatic:
@@ -42,3 +46,40 @@ params:
           - "SLIDINGWINDOW:4:30"
           - "MINLEN:35"
           - "TOPHRED33"
+
+#######################
+## read depth params ##
+#######################
+
+chrs:
+  chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chrX,chrY
+binSize:  1000000 # set window size to compute coverage
+qual: 20
+
+#####################
+## ichorCNA params ##
+#####################
+
+ichorCNA_gcWig: data/ichorCNA_extdata/gc_hg38_1000kb.wig # must use gc wig file corresponding to same binSize (required)
+ichorCNA_mapWig:  data/ichorCNA_extdata/map_hg38_1000kb.wig # must use map wig file corresponding to same binSize (required)
+ichorCNA_maxCN:  5 # set maximum copy number to use
+ichorCNA_includeHOMD: FALSE # TRUE/FALSE to include homozygous deletion state
+ichorCNA_chrs:  paste0("chr",c(1:22, "X"))
+ichorCNA_chrTrain:  paste0("chr",c(1:22)) # chrs used for training ichorCNA parameters, e.g. tumor fraction.
+ichorCNA_genomeStyle:  NCBI
+ichorCNA_estimateNormal:  TRUE
+ichorCNA_estimatePloidy:  TRUE
+ichorCNA_estimateClonality: TRUE
+ichorCNA_scStates:  c(1,3) # states to use for subclonal CN
+ichorCNA_centromere:  data/ichorCNA_extdata/GRCh38.GCA_000001405.2_centromere_acen.txt
+ichorCNA_txnE:  0.9999 # lower (e.g. 0.99) leads to higher sensitivity and more segments
+ichorCNA_txnStrength:  10000 # lower (e.g. 100) leads to higher sensitivity and more segments
+ichorCNA_minMapScore: 0.75
+ichorCNA_fracReadsInChrYForMale: 0.002
+ichorCNA_maxFracGenomeSubclone: 0.5 # Exclude solutions if total length of subclonal CNAs > this fraction of the genome
+ichorCNA_maxFracCNASubclone: 0.7 # Exclude solutions if total length of subclonal CNAs > this fraction of total CNA length
+ichorCNA_plotFileType:  pdf
+ichorCNA_plotYlim:  c(-2,4)
+
+#ichorCNA_normal:  c(0.5,0.6,0.7,0.8,0.9,0.95) # non-tumor fraction parameter restart values; higher values should be included for cfDNA
+#ichorCNA_ploidy:  c(2,3) # ploidy parameter restart values

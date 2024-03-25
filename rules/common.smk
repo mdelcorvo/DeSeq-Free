@@ -25,13 +25,6 @@ def getpath(str):
 		str += '/'
 	return str
 
-def get_fastq(wildcards):
-    """Get fastq files of given sample."""
-    fastqs = samples.loc[(wildcards.id), ["fq1", "fq2"]].dropna()
-    if len(fastqs) == 2:
-        return {"r1": fastqs.fq1, "r2": fastqs.fq2}
-    return {"r1": fastqs.fq1}
-
 def is_single_end(id):
     """Return True if sample is single end."""
     return pd.isnull(samples.loc[(id), "fq2"])
@@ -44,9 +37,32 @@ def is_plasma_sample(sample_type):
     """Return True if sample is single end."""
     return s1.loc[(sample_type),'type']=='plasma'
 
+def is_tumor_sample(sample_type):
+    """Return True if sample is single end."""
+    return s1.loc[(sample_type),'type']=='tumor'
+
+def is_control_sample(sample_type):
+    """Return True if sample is single end."""
+    return s1.loc[(sample_type),'type']=='control'
+
 ###########
 #For unpack
 ###########
+
+def get_fastq(wildcards):
+    """Get fastq files of given sample."""
+    fastqs = samples.loc[(wildcards.id), ["fq1", "fq2"]].dropna()
+    if len(fastqs) == 2:
+        return {"r1": fastqs.fq1, "r2": fastqs.fq2}
+    return {"r1": fastqs.fq1}
+
+def fastq(wildcards):
+    if not is_single_end1(**wildcards):
+        fq1= f'{derived}/pre_processing/final/{{sample_type}}-paired.R1.fastq.gz'
+        fq2 = f'{derived}/pre_processing/final/{{sample_type}}-paired.R2.fastq.gz'
+        return {"r1": fq1, "r2": fq2}
+    fq1 = f'{derived}/pre_processing/final/{{sample_type}}.fastq.gz'
+    return fq1
 
 def get_trimmed(wildcards):
     if not is_single_end(**wildcards):
@@ -55,6 +71,7 @@ def get_trimmed(wildcards):
         return {"r1": r1, "r2": r2}
     r1 = f'{derived}/pre_processing/temp/{{id}}.fastq.gz'
     return r1
+
 
 #############
 # For bwa mem
@@ -82,13 +99,42 @@ def get_trimmed_reads_extendedFrags(wildcards):
         # paired-end sample
         return f'{derived}/pre_processing/final/{{sample_type}}.extendedFrags.fastq.gz'.format(**wildcards)
 
+
 def get_read_group(wildcards):
     """Denote sample name and platform in read group."""
     return r"-R '@RG\tID:{sample_type}\tSM:{sample_type}\tPL:{sample_type}'".format(
         sample_type=wildcards.sample_type,
         platform='ILLUMINA')
 
+##############
+# For Varscan2
+##############
 
+
+
+def get_IchorCNA(wildcards):
+    """Denote sample name and platform in read group."""
+    return (r"--id {sample_type} --gcWig {gcwig} --mapWig {mapwig} --maxCN {maxCN} "
+            r"--includeHOMD {includeHOMD} --chrs '{chrs_ichorCNA}' --chrTrain '{chrTrain}' "
+            r"--genomeStyle {genomeStyle} --estimateNormal {estimateNormal} "
+            r"--estimatePloidy {estimatePloidy} --estimateScPrevalence {estimateClonality} "
+            r"--scStates '{scStates}' --centromere {centromere} --genomeBuild hg38 "
+            r"--txnE {txnE} --txnStrength {txnStrength} "
+            r" --minMapScore  {minMapScore} --fracReadsInChrYForMale  {fracReadsChrYMale} "
+            r"--maxFracGenomeSubclone {maxFracGenomeSubclone} --maxFracCNASubclone {maxFracCNASubclone} "
+            r" --plotFileType {plotFileType} --plotYLim '{plotYlim}' ").format(
+        sample_type=wildcards.sample_type,
+        gcwig=gcwig,mapwig=mapwig,
+        maxCN=maxCN,includeHOMD=includeHOMD,
+        chrs_ichorCNA=chrs_ichorCNA,chrTrain=chrTrain,
+        genomeStyle=genomeStyle,
+        estimatePloidy=estimatePloidy,estimateNormal=estimateNormal,
+        estimateClonality=estimateClonality,scStates=scStates,
+        centromere=centromere,txnE=txnE,txnStrength=txnStrength,
+        minMapScore=minMapScore,fracReadsChrYMale=fracReadsChrYMale,
+        maxFracGenomeSubclone=maxFracGenomeSubclone,
+        maxFracCNASubclone=maxFracCNASubclone,
+        plotFileType=plotFileType,plotYlim=plotYlim)
 
 samples = pd.read_excel(config['meta'], dtype=str)
 
@@ -106,10 +152,9 @@ samples = samples.set_index(["id"], drop=False)
 
 s1=samples.drop_duplicates('sample_type')
 s1=s1.set_index(["sample_type"], drop=False)
-#plasma=s1.loc[s1["type"]=='plasma']
-#plasma['plasma']= plasma['sample_type']
-#plasma=plasma.set_index(["plasma"], drop=False)
-#del plasma["sample_type"]
+
+s2=s1.drop_duplicates('sample')['sample'].to_frame().set_index(["sample"], drop=False)
+s2.index.names = ['sample_calling']
 
 ####### HELPER VARIABLES #######
 # Directories
@@ -119,6 +164,29 @@ final = outputdir + config["final_data"]
 logs = outputdir + config["logs"]
 tmpdir = config["tmpdir"]
 benchmarks = outputdir + config["benchmarks"]
-
 genome_data = config["genome_data"]
 
+binSize = config["binSize"]
+qual= config["qual"]
+chrs= config["chrs"]
+
+gcwig=config["ichorCNA_gcWig"]
+mapwig=config["ichorCNA_mapWig"]
+maxCN=config["ichorCNA_maxCN"]
+includeHOMD=config["ichorCNA_includeHOMD"]
+chrs_ichorCNA=config["ichorCNA_chrs"]
+chrTrain=config["ichorCNA_chrTrain"]
+genomeStyle=config["ichorCNA_genomeStyle"]
+estimatePloidy=config["ichorCNA_estimatePloidy"]
+estimateNormal=config["ichorCNA_estimateNormal"]
+estimateClonality=config["ichorCNA_estimateClonality"]
+scStates=config["ichorCNA_scStates"]
+centromere=config["ichorCNA_centromere"]
+txnE=config["ichorCNA_txnE"]
+txnStrength=config["ichorCNA_txnStrength"]
+minMapScore=config["ichorCNA_minMapScore"]
+fracReadsChrYMale=config["ichorCNA_fracReadsInChrYForMale"]
+maxFracGenomeSubclone=config["ichorCNA_maxFracGenomeSubclone"]
+maxFracCNASubclone=config["ichorCNA_maxFracCNASubclone"]
+plotFileType=config["ichorCNA_plotFileType"]
+plotYlim=config["ichorCNA_plotYlim"]
