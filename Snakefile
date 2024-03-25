@@ -19,5 +19,6 @@ rule all:
        expand(f'{derived}/cna/{{sample_type}}.cna.seg',sample_type=s1[s1["type"]== 'tumor']['sample_type']),
        expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
        expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"]),
-       expand(f'{derived}/variant_calling/{{sample_calling}}-plasma.snp',sample_calling=s2["sample"]),
-       expand(f'{derived}/variant_calling/{{sample_calling}}-tumor.snp',sample_calling=s2["sample"])
+       expand(f'{derived}/variant_calling/{{sample_calling}}-plasma.snp.Somatic.hc',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/{{sample_calling}}-tumor.snp.Somatic.hc',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/{{sample_calling}}-plasma-tumor.shared.snp',sample_calling=s2["sample"])

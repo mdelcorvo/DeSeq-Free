@@ -5,7 +5,7 @@ meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
 
 output: /hpcnfs/scratch/DIMA/delcorvo/analysis/PelicciG/GBM #Set the OUTPUT directory
 tmpdir: /hpcnfs/scratch/DIMA/delcorvo/pipelines/tmp # Set a temporary folder
-ncores: 24 # Number of cores
+ncores: 4 # Number of cores
 ##################
 
 ##################

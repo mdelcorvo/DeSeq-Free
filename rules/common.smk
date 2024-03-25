@@ -72,6 +72,17 @@ def get_trimmed(wildcards):
     r1 = f'{derived}/pre_processing/temp/{{id}}.fastq.gz'
     return r1
 
+def get_pileup(wildcards):
+    plasma = f'{derived}/variant_calling/{{sample_calling}}-plasma.pileup'
+    tumor = f'{derived}/variant_calling/{{sample_calling}}-tumor.pileup'
+    control = f'{derived}/variant_calling/{{sample_calling}}-control.pileup'
+    return {"plasma": plasma, "tumor": tumor, "control": control}
+
+def get_bam(wildcards):
+    plasma = f'{derived}/recal/{{sample_calling}}-plasma.bam'
+    tumor = f'{derived}/recal/{{sample_calling}}-tumor.bam'
+    control = f'{derived}/recal/{{sample_calling}}-control.bam'
+    return {"plasma": plasma, "tumor": tumor, "control": control}
 
 #############
 # For bwa mem
@@ -105,11 +116,6 @@ def get_read_group(wildcards):
     return r"-R '@RG\tID:{sample_type}\tSM:{sample_type}\tPL:{sample_type}'".format(
         sample_type=wildcards.sample_type,
         platform='ILLUMINA')
-
-##############
-# For Varscan2
-##############
-
 
 
 def get_IchorCNA(wildcards):
