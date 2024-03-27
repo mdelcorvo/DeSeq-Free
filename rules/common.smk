@@ -73,9 +73,9 @@ def get_trimmed(wildcards):
     return r1
 
 def get_pileup(wildcards):
-    plasma = f'{derived}/variant_calling/{{sample_calling}}-plasma.pileup'
-    tumor = f'{derived}/variant_calling/{{sample_calling}}-tumor.pileup'
-    control = f'{derived}/variant_calling/{{sample_calling}}-control.pileup'
+    plasma = f'{derived}/variant_calling/Varscan2/pileup/{{sample_calling}}-plasma.pileup'
+    tumor = f'{derived}/variant_calling/Varscan2/pileup/{{sample_calling}}-tumor.pileup'
+    control = f'{derived}/variant_calling/Varscan2/pileup/{{sample_calling}}-control.pileup'
     return {"plasma": plasma, "tumor": tumor, "control": control}
 
 def get_bam(wildcards):

@@ -3,15 +3,15 @@
 #################
 meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
 
-output: /hpcnfs/scratch/DIMA/delcorvo/analysis/PelicciG/GBM #Set the OUTPUT directory
-tmpdir: /hpcnfs/scratch/DIMA/delcorvo/pipelines/tmp # Set a temporary folder
-ncores: 4 # Number of cores
+output: /data/delcorvo/analysis/pelicci/GBM #Set the OUTPUT directory
+tmpdir: /data/delcorvo/analysis/tmp # Set a temporary folder
+ncores: 32 # Number of cores
 ##################
 
 ##################
-genome_data: /hpcnfs/data/DIMA/delcorvo/benchmarking/seqc2/ref
-dbsnp: /hpcnfs/data/DIMA/delcorvo/benchmarking/hsapiens/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz
-dbsnp_tbi: /hpcnfs/data/DIMA/delcorvo/benchmarking/hsapiens/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi
+genome_data: /data/delcorvo/benchmarking/seqc2/ref
+dbsnp: /data/delcorvo/tools/dbsnp138.vcf.gz
+dbsnp_tbi: /data/delcorvo/tools/dbsnp138.vcf.gz.tbi
 ##################
 
 #######################################
