@@ -6,7 +6,7 @@
 #     3. Filtering somatic calls from Varscan2
 #     4. Extraction of shared variants (i.e. variants shared between plasma and tumour)
 #     5. Extraction of unique variants (i.e. variants not shared between plasma and tumour)
-#
+##
 #     # LoFreq
 #     1. Calling somatic variants: lofreq somatic
 ##########################################################################################
@@ -170,44 +170,64 @@ rule VarScan2_filtering:
 
 rule shared_variants:
     input:
-        snp_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfilter.snp',
-        snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfilter.snp',
+        snp_plasma_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered.edit',
+        snp_tumor_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.edit',
+        indel_plasma_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.indel.fpfiltered.edit',
+        indel_tumor_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered.edit',
     output:
-        shared=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.shared.snp',
-        unique=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.unique.snp'
+        snp_shared=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.shared.snp',
+        snp_unique=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.unique.snp',
+        indel_shared=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.shared.snp',
+        indel_unique=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.unique.snp'
     threads: 1
     priority: 40
     shell:
         """
 
         awk 'FNR==NR{{a[$1,$2]=$0;next}}{{if(b=a[$1,$2]){{print b}} }}' \
-        {input.snp_plasma} {input.snp_tumor} \
-        > {output.shared}
+        {input.snp_plasma_edit} {input.snp_tumor_edit} \
+        > {output.snp_shared}
         
         awk 'FNR==NR{{a[$1,$2]++}}FNR!=NR && !a[$1,$2]{{print}}' \
-        {input.snp_tumor} {input.snp_plasma} \
-        > {output.unique}
+        {input.snp_tumor_edit} {input.snp_plasma_edit} \
+        > {output.snp_unique}
+        
+        awk 'FNR==NR{{a[$1,$2]=$0;next}}{{if(b=a[$1,$2]){{print b}} }}' \
+        {input.indel_plasma_edit} {input.indel_tumor_edit} \
+        > {output.indel_shared}
+        
+        awk 'FNR==NR{{a[$1,$2]++}}FNR!=NR && !a[$1,$2]{{print}}' \
+        {input.indel_tumor_edit} {input.indel_plasma_edit} \
+        > {output.indel_unique}
+        
         """
 
 rule Varscan2_snp2vcf:
     input:
-        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfiltered',
-        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfiltered',
-        shared=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.shared.snp',
-        unique=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.unique.snp'
+        snp_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered',
+        snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered',
+        indel_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.indel.fpfiltered',
+        indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered',
     params:
         vs_format_converter="scripts/vs_format_converter.py"
     output:
-        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfiltered.vcf.gz',
-        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfiltered.vcf.gz',
+        snp_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfiltered.vcf.gz',
+        snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfiltered.vcf.gz',
+        indel_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfiltered.vcf.gz',
+        indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfiltered.vcf.gz',
     threads: 1
     priority: 40
     shell:
         """
 
-        python {params.vs_format_converter} {input.plasma} | bgzip -c > {output.plasma}
+        python {params.vs_format_converter} {input.snp_plasma} | bgzip -c > {output.snp_plasma}
         
-        python {params.vs_format_converter} {input.tumor}  | bgzip -c > {output.tumor}
+        python {params.vs_format_converter} {input.snp_tumor}  | bgzip -c > {output.snp_tumor}
+        
+        python {params.vs_format_converter} {input.indel_plasma} | bgzip -c > {output.indel_plasma}
+        
+        python {params.vs_format_converter} {input.indel_tumor}  | bgzip -c > {output.indel_tumor}
+        
         
         """
 
