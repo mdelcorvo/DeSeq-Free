@@ -19,6 +19,7 @@ rule all:
        expand(f'{derived}/cna/{{sample_type}}.cna.seg',sample_type=s1[s1["type"]== 'tumor']['sample_type']),
        expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
        expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"]),
-       expand(plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.fpfiltered.vcf.gz',sample_calling=s2["sample"]),
-       expand(tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.fpfiltered.vcf.gz',sample_calling=s2["sample"]),
-       expand(f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_somatic_final_minus-dbsnp.snvs.vcf.gz',sample_calling=s2["sample"])
+       expand(f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.filtered.vcf.gz',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.filtered.vcf.gz',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.filtered.vcf.gz',sample_calling=s2["sample"]),
+       expand(f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.filtered.vcf.gz',sample_calling=s2["sample"])
