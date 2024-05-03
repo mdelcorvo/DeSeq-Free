@@ -78,6 +78,12 @@ def get_pileup(wildcards):
     control = f'{derived}/variant_calling/Varscan2/pileup/{{sample_calling}}-control.pileup'
     return {"plasma": plasma, "tumor": tumor, "control": control}
 
+def get_wig(wildcards):
+    plasma = f'{derived}/cna/wig/{{sample_calling}}-plasma.wig'
+    tumor = f'{derived}/cna/wig/{{sample_calling}}-tumor.wig'
+    control = f'{derived}/cna/wig/{{sample_calling}}-control.wig'
+    return {"plasma": plasma, "tumor": tumor, "control": control}
+
 def get_bam(wildcards):
     plasma = f'{derived}/recal/{{sample_calling}}-plasma.bam'
     tumor = f'{derived}/recal/{{sample_calling}}-tumor.bam'
@@ -120,27 +126,30 @@ def get_read_group(wildcards):
 
 def get_IchorCNA(wildcards):
     """Denote sample name and platform in read group."""
-    return (r"--id {sample_type} --gcWig {gcwig} --mapWig {mapwig} --maxCN {maxCN} "
+    return (r"--gcWig {gcwig} --mapWig {mapwig} "
             r"--includeHOMD {includeHOMD} --chrs '{chrs_ichorCNA}' --chrTrain '{chrTrain}' "
             r"--genomeStyle {genomeStyle} --estimateNormal {estimateNormal} "
-            r"--estimatePloidy {estimatePloidy} --estimateScPrevalence {estimateClonality} "
-            r"--scStates '{scStates}' --centromere {centromere} --genomeBuild hg38 "
+            r"--estimatePloidy {estimatePloidy} "
+            r"--centromere {centromere} --genomeBuild hg38 "
             r"--txnE {txnE} --txnStrength {txnStrength} "
             r" --minMapScore  {minMapScore} --fracReadsInChrYForMale  {fracReadsChrYMale} "
             r"--maxFracGenomeSubclone {maxFracGenomeSubclone} --maxFracCNASubclone {maxFracCNASubclone} "
             r" --plotFileType {plotFileType} --plotYLim '{plotYlim}' ").format(
-        sample_type=wildcards.sample_type,
         gcwig=gcwig,mapwig=mapwig,
-        maxCN=maxCN,includeHOMD=includeHOMD,
-        chrs_ichorCNA=chrs_ichorCNA,chrTrain=chrTrain,
+        includeHOMD=includeHOMD,
+        chrs_ichorCNA=chrs_ichorCNA,
+        chrTrain=chrTrain,
         genomeStyle=genomeStyle,
-        estimatePloidy=estimatePloidy,estimateNormal=estimateNormal,
-        estimateClonality=estimateClonality,scStates=scStates,
-        centromere=centromere,txnE=txnE,txnStrength=txnStrength,
-        minMapScore=minMapScore,fracReadsChrYMale=fracReadsChrYMale,
+        estimatePloidy=estimatePloidy,
+        estimateNormal=estimateNormal,
+        centromere=centromere,
+        txnE=txnE,txnStrength=txnStrength,
+        minMapScore=minMapScore,
+        fracReadsChrYMale=fracReadsChrYMale,
         maxFracGenomeSubclone=maxFracGenomeSubclone,
         maxFracCNASubclone=maxFracCNASubclone,
-        plotFileType=plotFileType,plotYlim=plotYlim)
+        plotFileType=plotFileType,
+        plotYlim=plotYlim)
 
 samples = pd.read_excel(config['meta'], dtype=str)
 
@@ -171,7 +180,7 @@ logs = outputdir + config["logs"]
 tmpdir = config["tmpdir"]
 benchmarks = outputdir + config["benchmarks"]
 genome_data = config["genome_data"]
-
+exon_transcripts_hg38 = os.path.join(config["annotation"], "canonical_exon_transcripts_hg38.bed")
 binSize = config["binSize"]
 qual= config["qual"]
 chrs= config["chrs"]

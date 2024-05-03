@@ -5,7 +5,7 @@ meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
 
 output: /data/delcorvo/analysis/pelicci/GBM #Set the OUTPUT directory
 tmpdir: /data/delcorvo/analysis/tmp # Set a temporary folder
-ncores: 32 # Number of cores
+ncores: 44 # Number of cores
 ##################
 
 ##################
@@ -22,6 +22,7 @@ final_data: final_data
 metadata: docs
 logs: derived_data/logs
 benchmarks: derived_data/benchmarks
+annotation: data/annotation
 ##################
 
 ########################
@@ -60,11 +61,13 @@ qual: 20
 ## ichorCNA params ##
 #####################
 
+ichorCNA_Nornal_Panel: false
+
 ichorCNA_gcWig: data/ichorCNA_extdata/gc_hg38_1000kb.wig # must use gc wig file corresponding to same binSize (required)
 ichorCNA_mapWig:  data/ichorCNA_extdata/map_hg38_1000kb.wig # must use map wig file corresponding to same binSize (required)
 ichorCNA_maxCN:  5 # set maximum copy number to use
 ichorCNA_includeHOMD: FALSE # TRUE/FALSE to include homozygous deletion state
-ichorCNA_chrs:  paste0("chr",c(1:22, "X"))
+ichorCNA_chrs:  paste0("chr",c(1:22))
 ichorCNA_chrTrain:  paste0("chr",c(1:22)) # chrs used for training ichorCNA parameters, e.g. tumor fraction.
 ichorCNA_genomeStyle:  NCBI
 ichorCNA_estimateNormal:  TRUE

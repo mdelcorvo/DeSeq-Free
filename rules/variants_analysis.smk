@@ -9,6 +9,9 @@
 ##
 #     # LoFreq
 #     1. Calling somatic variants: lofreq somatic
+#
+#     Freebayes
+#     1. Calling somatic variants with Freebayes
 ##########################################################################################
 
 ##########
@@ -165,7 +168,7 @@ rule VarScan2_filtering:
         
         """
 
-rule shared_variants:
+rule VarScan2_shared_variants:
     input:
         snp_plasma_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered.edit',
         snp_tumor_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.edit'
@@ -201,8 +204,8 @@ rule Varscan2_snp2vcf:
         snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.vcf.gz',
         indel_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.indel.fpfiltered.vcf.gz',
         indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered.vcf.gz',
-        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.filtered.vcf.gz',
-        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.filtered.vcf.gz'
+        plasma=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
+        tumor=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.Varscan2.final.vcf.gz'
     threads: 1
     priority: 40
     shell:
@@ -225,8 +228,7 @@ rule Varscan2_snp2vcf:
 # LoFreq
 ########
 
-
-rule lofreq:
+rule LoFreq:
     input:
         unpack(get_bam),
         ref=f'{genome_data}/GRCh38.d1.vd1.fa',
@@ -239,8 +241,8 @@ rule lofreq:
         snp_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.snvs.vcf.gz',
         indel_plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
         indel_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
-        plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.filtered.vcf.gz',
-        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.filtered.vcf.gz'
+        plasma=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
+        tumor=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.LoFreq.final.vcf.gz'
     conda:
         "../envs/lofreq.yaml"
     threads: config["ncores"]
@@ -259,7 +261,44 @@ rule lofreq:
         
         """
 
-#########
-# Mutect2
-#########
+###########
+# Freebayes
+###########
 
+rule freebayes:
+    input:
+        unpack(get_bam),
+        ref=f'{genome_data}/GRCh38.d1.vd1.fa',
+        known=config['dbsnp']
+    params:
+        freebayes_somatic = "scripts/freebayes_somatic.sh",
+        tmp_plasma=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/tmp_plasma',
+        tmp_tumor=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/tmp_tumor',
+    output:
+        plasma=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.filtered.vcf.gz',
+        tumor=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.filtered.vcf.gz',
+        plasma_pass=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
+        tumor_pass=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.Freebayes.final.vcf.gz'
+    conda:
+        "../envs/fb_somatic.yaml"
+    threads: config["ncores"]
+    priority: 40
+    shell:
+        """
+        mkdir {params.tmp_plasma}
+        mkdir {params.tmp_tumor}
+        
+        {params.freebayes_somatic}  \
+        -t {input.tumor} -n {input.control} \
+        -f {input.ref} -d {params.tmp_tumor} -P {input.known} \
+        -c {threads} -v {output.tumor}
+        
+        {params.freebayes_somatic}  \
+        -t {input.plasma} -n {input.control} \
+        -f {input.ref} -d {params.tmp_plasma} -P {input.known} \
+        -c {threads} -v {output.plasma}
+        
+        bcftools view -f PASS {output.tumor} | bgzip -c > {output.tumor_pass}
+        
+        bcftools view -f PASS {output.plasma} | bgzip -c > {output.plasma_pass}
+        """
