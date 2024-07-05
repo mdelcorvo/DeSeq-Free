@@ -38,7 +38,8 @@ rule qc_sequencing_fastq:
 
 rule mosdepth:
     input:
-        bam=f'{derived}/recal/{{sample_type}}.bam'
+        bam=f'{derived}/recal/{{sample_type}}.bam',
+        bai=f'{derived}/recal/{{sample_type}}.bam.bai'
     output:
         dist=f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt'
     params:

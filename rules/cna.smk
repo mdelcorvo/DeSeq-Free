@@ -63,8 +63,8 @@ if config['ichorCNA_Nornal_Panel']:
             normal_sample=f'{derived}/cna/normal_samples'
         output:
             f'{derived}/cna/normal_samples_median.rds'
-        log: f'{logs}/{{sample_type}}/02_IchorCNA_normal_panel_creation.log'
-        benchmark: f'{benchmarks}/{{sample_type}}/02_IchorCNA_normal_panel_creation.txt'
+        log: f'{logs}/02_IchorCNA_normal_panel_creation.log'
+        benchmark: f'{benchmarks}/02_IchorCNA_normal_panel_creation.txt'
         threads: 1
         group: "cna_analysis"
         priority: 40
@@ -180,7 +180,7 @@ else:
 
             """
 
-rule plasma_tumor_comparison:
+rule cna_plasma_tumor_comparison:
     input:
         plasma_cna=f'{derived}/cna/seg/{{sample_calling}}-plasma.cna.seg',
         tumor_cna=f'{derived}/cna/seg/{{sample_calling}}-tumor.cna.seg'
@@ -188,7 +188,7 @@ rule plasma_tumor_comparison:
         compare="scripts/IchorCNA_result_comp.R",
         annot=exon_transcripts_hg38
     output:
-        shared_cna=f'{final}/cna/{{sample_calling}}-plasma-tumor-shared.cna.txt'
+        shared_cna=f'{derived}/cna/results/{{sample_calling}}-plasma-tumor-shared.cna.txt'
     log: f'{logs}/{{sample_calling}}/04_IchorCNA.plasma_tumor_comparison.log'
     benchmark: f'{benchmarks}/{{sample_calling}}-plasma-tumor/04_IchorCNA.plasma_tumor_comparison.txt'
     threads: 1
@@ -202,4 +202,32 @@ rule plasma_tumor_comparison:
             {output.shared_cna} \
             {log} 
 
+            """
+
+rule list_results:
+    input:
+        expand(f'{derived}/cna/results/{{sample_calling}}-plasma-tumor-shared.cna.txt', sample_calling=s2["sample"])
+    output:
+        f'{derived}/cna/output_samples.txt'
+    threads: 1
+    priority: 40
+    shell:
+            """
+            ls {input} > {output}
+            """
+
+rule cna_merge_results:
+    input:
+        f'{derived}/cna/output_samples.txt'
+    output:
+        f'{final}/cna/plasma-tumor-shared.cna.txt'
+    params:
+        merge="scripts/merge_results.R"
+    threads: 1
+    priority: 40
+    shell:
+            """
+            Rscript --vanilla {params.merge} \
+            {input} \
+            {output} \
             """

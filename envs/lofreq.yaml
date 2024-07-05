@@ -4,3 +4,4 @@ channels:
 dependencies:
   - bioconda::lofreq
   - bioconda::bcftools
+  - bioconda::perl-vcftools-vcf

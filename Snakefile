@@ -15,11 +15,7 @@ include: "rules/variants_analysis.smk"
 
 rule all:
    input:
-       expand(f'{derived}/cna/result/{{sample_calling}}-plasma-tumor-shared.cna.txt',sample_calling=s2["sample"]),
-
+       #f'{final}/cna/plasma-tumor-shared.cna.txt',
        expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
-       expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"]),
-
-       expand(f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',sample_calling=s2["sample"]),
-       expand(f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',sample_calling=s2["sample"]),
-       expand(f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',sample_calling=s2["sample"])
+       expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"])
+       #expand(f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.txt',sample_calling=s2["sample"])

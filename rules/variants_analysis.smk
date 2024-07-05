@@ -1,17 +1,15 @@
 ###### Rules for somatic variant analysis ######
-#     Somatic variant analysis with VarScan2 / LoFreq
-#     # Varscan2
+#
+#     * Calling somatic variants with Varscan2
 #     1. Generating mpileup.
 #     2. VarScan2
 #     3. Filtering somatic calls from Varscan2
 #     4. Extraction of shared variants (i.e. variants shared between plasma and tumour)
 #     5. Extraction of unique variants (i.e. variants not shared between plasma and tumour)
 ##
-#     # LoFreq
-#     1. Calling somatic variants: lofreq somatic
+#     * Calling somatic variants with LoFreq
 #
-#     Freebayes
-#     1. Calling somatic variants with Freebayes
+#     * Calling somatic variants with Freebayes
 ##########################################################################################
 
 ##########
@@ -204,8 +202,8 @@ rule Varscan2_snp2vcf:
         snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.vcf.gz',
         indel_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.indel.fpfiltered.vcf.gz',
         indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered.vcf.gz',
-        plasma=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
-        tumor=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.Varscan2.final.vcf.gz'
+        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
+        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz'
     threads: 1
     priority: 40
     shell:
@@ -218,9 +216,15 @@ rule Varscan2_snp2vcf:
         
         python {params.vs_format_converter} {input.indel_tumor}  | bgzip -c > {output.indel_tumor}
         
-        bcftools concat -O z -o {output.plasma} {output.snp_plasma} {output.indel_plasma}
+        tabix -p vcf {output.snp_plasma}
+        tabix -p vcf {output.indel_plasma}
         
-        bcftools concat -O z -o {output.tumor} {output.snp_tumor} {output.indel_tumor}
+        tabix -p vcf {output.snp_tumor}
+        tabix -p vcf {output.indel_tumor}
+        
+        vcf-concat {output.snp_plasma} {output.indel_plasma} | bgzip -c > {output.plasma}
+        
+        vcf-concat {output.snp_tumor} {output.indel_tumor} | bgzip -c > {output.tumor}
         
         """
 
@@ -241,8 +245,8 @@ rule LoFreq:
         snp_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.snvs.vcf.gz',
         indel_plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
         indel_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
-        plasma=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
-        tumor=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.LoFreq.final.vcf.gz'
+        plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
+        tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.vcf.gz'
     conda:
         "../envs/lofreq.yaml"
     threads: config["ncores"]
@@ -255,9 +259,9 @@ rule LoFreq:
         lofreq somatic -n {input.control} -t {input.tumor} -f {input.ref} \
         --threads {threads} -o {params.tumor} -d {input.known}
         
-        bcftools concat -O z -o {output.plasma} {output.snp_plasma} {output.indel_plasma}
+        vcf-concat {output.snp_plasma} {output.indel_plasma} | bgzip -c > {output.plasma}
         
-        bcftools concat -O z -o {output.tumor} {output.snp_tumor} {output.indel_tumor}
+        vcf-concat {output.snp_tumor} {output.indel_tumor} | bgzip -c > {output.tumor}
         
         """
 
@@ -277,8 +281,8 @@ rule freebayes:
     output:
         plasma=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.filtered.vcf.gz',
         tumor=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.filtered.vcf.gz',
-        plasma_pass=f'{final}/variant_calling/plasma/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
-        tumor_pass=f'{final}/variant_calling/tumor/{{sample_calling}}-tumor.Freebayes.final.vcf.gz'
+        plasma_pass=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
+        tumor_pass=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.vcf.gz'
     conda:
         "../envs/fb_somatic.yaml"
     threads: config["ncores"]
@@ -301,4 +305,167 @@ rule freebayes:
         bcftools view -f PASS {output.tumor} | bgzip -c > {output.tumor_pass}
         
         bcftools view -f PASS {output.plasma} | bgzip -c > {output.plasma_pass}
+        """
+
+rule vcf_rename:
+    input:
+        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz',
+        plasma_fb= f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.vcf.gz',
+    params:
+        sample='{sample_calling}'
+    output:
+        plasma_list_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.list.Varscan2.txt',
+        tumor_list_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.list.Varscan2.txt',
+        plasma_list_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.list.Freebayes.txt',
+        tumor_list_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.list.Freebayes.txt',
+        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.fixed.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.fixed.vcf.gz',
+        plasma_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.fixed.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.fixed.vcf.gz',
+    threads: 1
+    shell:
+        """
+
+        echo -e "Varscan2_{params.sample}_control\nVarscan2_{params.sample}_plasma"> {output.plasma_list_vs}
+        echo -e "Varscan2_{params.sample}_control\nVarscan2_{params.sample}_tumor"> {output.tumor_list_vs}
+        echo -e "Freebayes_{params.sample}_control\nFreebayes_{params.sample}_plasma"> {output.plasma_list_fb}
+        echo -e "Freebayes_{params.sample}_control\nFreebayes_{params.sample}_tumor"> {output.tumor_list_fb}
+        
+        zcat {input.plasma_vs} | bcftools reheader -s {output.plasma_list_vs} | bgzip -c > {output.plasma_vs}
+        zcat {input.tumor_vs} | bcftools reheader -s {output.tumor_list_vs} | bgzip -c > {output.tumor_vs}
+        zcat {input.plasma_fb} | bcftools reheader -s {output.plasma_list_fb} | bgzip -c > {output.plasma_fb}
+        zcat {input.tumor_fb} | bcftools reheader -s {output.tumor_list_fb} | bgzip -c > {output.tumor_fb}
+        
+        """
+
+
+rule vcf_annot:
+    input:
+        plasma_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.fixed.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.fixed.vcf.gz',
+        plasma_lf=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
+        tumor_lf=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.vcf.gz',
+        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.fixed.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.fixed.vcf.gz'
+    output:
+        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
+        plasma_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.annot.vcf.gz',
+        tumor_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.annot.vcf.gz',
+        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz'
+    params:
+        snpeff_db=snpeff_db,
+        snpeff_config=snpeff_config
+    log: f'{logs}/{{sample_calling}}/01_snpEff.log'
+    threads: 1
+    shell:
+        """
+        java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.plasma_fb} 2>{log} | \
+              bgzip > {output.plasma_fb} 2>>{log}
+              
+        java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.tumor_fb} 2>{log} | \
+              bgzip > {output.tumor_fb} 2>>{log}
+              
+         java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.plasma_lf} 2>{log} | \
+              bgzip > {output.plasma_lf} 2>>{log}
+              
+         java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.tumor_lf} 2>{log} | \
+              bgzip > {output.tumor_lf} 2>>{log}
+              
+         java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.plasma_vs} 2>{log} | \
+              bgzip > {output.plasma_vs} 2>>{log}
+              
+         java -Xmx16g -jar  {params.snpeff_db} \
+              -c  {params.snpeff_config} \
+              -v GRCh38.99 {input.tumor_vs} 2>{log} | \
+              bgzip > {output.tumor_vs} 2>>{log}
+                                  
+        """
+
+rule comparison_Varscan2:
+    input:
+        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz',
+    output:
+        tabulate=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
+        summary=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.summary.txt',
+    log: f'{logs}/{{sample_calling}}/01_Varscan2.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_Varscan2.txt'
+    threads: 1
+    group: "variant_analysis"
+    shell:
+        """
+        vcftoolz compare \
+        {input.plasma_vs} \
+        {input.tumor_vs} \
+        --tabulate {output.tabulate} > {output.summary}
+
+        """
+
+rule comparison_Freebayes:
+    input:
+        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
+    output:
+        tabulate=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.table.txt',
+        summary=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.summary.txt',
+    log: f'{logs}/{{sample_calling}}/01_Varscan2.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_Varscan2.txt'
+    threads: 1
+    group: "variant_analysis"
+    shell:
+        """
+        vcftoolz compare \
+        {input.plasma_fb} \
+        {input.tumor_fb} \
+        --tabulate {output.tabulate} > {output.summary}
+
+        """
+
+rule create_tables:
+    input:
+        tabulate_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.table.txt',
+        tabulate_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
+        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
+        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
+        plasma_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.annot.vcf.gz',
+        tumor_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.annot.vcf.gz',
+        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
+        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz'
+    params:
+        edit="scripts/edit_comparison.R",
+    output:
+        table=f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.txt',
+        summary=f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.stats.txt'
+    log: f'{logs}/{{sample_calling}}/create_tables.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}/create_tables.txt'
+    threads: 1
+    shell:
+        """
+        Rscript --vanilla {params.edit} \
+        {input.tabulate_fb} \
+        {input.tabulate_vs} \ 
+        {input.tumor_lf} \
+        {input.plasma_lf} \
+        {input.tumor_fb} \
+        {input.plasma_fb} \
+        {input.tumor_vs} \
+        {input.plasma_vs} \
+        {output.table} \
+        {output.summary} \
+        2> {log}
+
         """
