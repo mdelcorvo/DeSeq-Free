@@ -10,12 +10,10 @@ include: "rules/qc.smk"
 include: "rules/align-fastq.smk"
 include: "rules/cna.smk"
 include: "rules/variants_analysis.smk"
-#include: "rules/align-fastq_after_merge.smk"
 
 
 rule all:
    input:
-       #f'{final}/cna/plasma-tumor-shared.cna.txt',
+       f'{final}/cna/plasma-tumor-shared.cna.txt',
        expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
        expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"])
-       #expand(f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.txt',sample_calling=s2["sample"])

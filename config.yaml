@@ -1,11 +1,11 @@
 #################
 # MAIN parameters
 #################
-meta: metafile/low_pass_WGS.xlsx # Excel (.xlsx) metafile with fastq path.
+meta: metafile/GBM_metafile.xlsx # Excel (.xlsx) metafile with fastq path.
 
-output: /data/delcorvo/analysis/tmp/low_pass_WGS/results #Set the OUTPUT directory
+output: /data/delcorvo/analysis/GBM #Set the OUTPUT directory
 tmpdir: /data/delcorvo/analysis/tmp # Set a temporary folder
-ncores: 42 # Number of cores
+ncores: 24 # Number of cores
 ##################
 
 ##################
