@@ -5,9 +5,38 @@ import pandas as pd
 import numpy as np
 import re
 import glob
+import sys
+from pathlib import Path
 
 from snakemake.utils import validate
 from snakemake.utils import min_version
+
+def detect_file_type(file_path):
+    if not os.path.exists(file_path):
+        return 'File does not exist'
+    _, extension = os.path.splitext(file_path)
+    if extension.lower() == '.csv':
+        try:
+            samples = pd.read_csv(file_path, dtype=str)
+            return samples
+        except pd.errors.ParserError:
+            return 'Invalid CSV format'
+        except Exception:
+            return 'Error reading CSV file'
+    elif extension.lower() == '.xlsx':
+        try:
+            samples = pd.read_excel(file_path, dtype=str,engine="openpyxl")
+            return samples
+        except Exception:
+            return 'Error reading Excel (XLSX) file'
+    else:
+        return 'Unknown format'
+
+def make_absolute(path):
+    """Convert a relative path to an absolute path."""
+    if not os.path.isabs(path):
+        return os.path.abspath(path)
+    return path
 
 def check_fastq(path):
     if os.path.isfile(path):
@@ -78,21 +107,15 @@ def get_pileup(wildcards):
     control = f'{derived}/variant_calling/Varscan2/pileup/{{sample_calling}}-control.pileup'
     return {"plasma": plasma, "tumor": tumor, "control": control}
 
-def get_wig(wildcards):
-    plasma = f'{derived}/cna/wig/{{sample_calling}}-plasma.wig'
-    tumor = f'{derived}/cna/wig/{{sample_calling}}-tumor.wig'
-    control = f'{derived}/cna/wig/{{sample_calling}}-control.wig'
-    return {"plasma": plasma, "tumor": tumor, "control": control}
-
 def get_bam(wildcards):
     plasma = f'{derived}/recal/{{sample_calling}}-plasma.bam'
     tumor = f'{derived}/recal/{{sample_calling}}-tumor.bam'
     control = f'{derived}/recal/{{sample_calling}}-control.bam'
     return {"plasma": plasma, "tumor": tumor, "control": control}
 
-#############
-# For bwa mem
-#############
+######################
+# For align-fastq rule
+######################
 
 def get_trimmed_reads(wildcards):
     """Get trimmed reads of given sample."""
@@ -103,56 +126,40 @@ def get_trimmed_reads(wildcards):
     # single end sample
     return f'{derived}/pre_processing/final/{{sample_type}}-single.fastq.gz'.format(**wildcards)
 
-def get_trimmed_reads_notCombined(wildcards):
-
-    if is_plasma_sample(**wildcards):
-        # paired-end sample
-        return expand(f'{derived}/pre_processing/final/{{sample_type}}.notCombined_{{group}}.fastq.gz',
-                      group=[1, 2], **wildcards)
-
-def get_trimmed_reads_extendedFrags(wildcards):
-
-    if is_plasma_sample(**wildcards):
-        # paired-end sample
-        return f'{derived}/pre_processing/final/{{sample_type}}.extendedFrags.fastq.gz'.format(**wildcards)
-
-
 def get_read_group(wildcards):
     """Denote sample name and platform in read group."""
     return r"-R '@RG\tID:{sample_type}\tSM:{sample_type}\tPL:{sample_type}'".format(
         sample_type=wildcards.sample_type,
         platform='ILLUMINA')
 
+#################
+# For CNA calling
+#################
 
 def get_IchorCNA(wildcards):
     """Denote sample name and platform in read group."""
-    return (r"--gcWig {gcwig} --mapWig {mapwig} "
-            r"--includeHOMD {includeHOMD} --chrs '{chrs_ichorCNA}' --chrTrain '{chrTrain}' "
-            r"--genomeStyle {genomeStyle} --estimateNormal {estimateNormal} "
-            r"--estimatePloidy {estimatePloidy} "
-            r"--centromere {centromere} --genomeBuild hg38 "
-            r"--txnE {txnE} --txnStrength {txnStrength} "
-            r" --minMapScore  {minMapScore} --fracReadsInChrYForMale  {fracReadsChrYMale} "
-            r"--maxFracGenomeSubclone {maxFracGenomeSubclone} --maxFracCNASubclone {maxFracCNASubclone} "
-            r" --plotFileType {plotFileType} --plotYLim '{plotYlim}' ").format(
-        gcwig=gcwig,mapwig=mapwig,
-        includeHOMD=includeHOMD,
-        chrs_ichorCNA=chrs_ichorCNA,
-        chrTrain=chrTrain,
-        genomeStyle=genomeStyle,
-        estimatePloidy=estimatePloidy,
-        estimateNormal=estimateNormal,
+    return (r"{gcwig} {mapwig} "
+            r"{centromere} "
+            r"{minMapScore}").format(
+        gcwig=gcwig,
+        mapwig=mapwig,
         centromere=centromere,
-        txnE=txnE,txnStrength=txnStrength,
-        minMapScore=minMapScore,
-        fracReadsChrYMale=fracReadsChrYMale,
-        maxFracGenomeSubclone=maxFracGenomeSubclone,
-        maxFracCNASubclone=maxFracCNASubclone,
-        plotFileType=plotFileType,
-        plotYlim=plotYlim)
+        minMapScore=minMapScore)
 
-samples = pd.read_excel(config['meta'], dtype=str)
+def get_bwa2_index(wildcards):
+    """Denote sample name and platform in read group."""
+    return (r"{genome} {genome}.amb {genome}.ann {genome}.bwt.2bit.64 {genome}.pac ").format(
+        genome=genome)
 
+def get_plasma_wig(wildcards):
+    plasma = f'{derived}/cna/wig/{{sample_calling}}-plasma.wig'
+    return {"plasma": plasma}
+
+def get_tumor_wig(wildcards):
+    tumor = f'{derived}/cna/wig/{{sample_calling}}-tumor.wig'
+    return {"tumor": tumor}
+
+samples = detect_file_type(make_absolute(config['input']))
 samples = samples[~samples['fq1'].apply(check_fastq) != 1]
 samples = samples[~samples['fq2'].apply(check_fastq) != 1]
 
@@ -177,33 +184,17 @@ outputdir = getpath(config["output"])
 derived = outputdir + config["derived_data"]
 final = outputdir + config["final_data"]
 logs = outputdir + config["logs"]
-tmpdir = config["tmpdir"]
 benchmarks = outputdir + config["benchmarks"]
-genome_data = config["genome_data"]
+genome = config["genome"]
+genome_fai=genome+'.fai'
+genome_dict = os.path.splitext(genome)[0] + ".dict"
 exon_transcripts_hg38 = os.path.join(config["annotation"], "canonical_exon_transcripts_hg38.bed")
-snpeff_db = os.path.join(config["annotation"], "snpeff-5.2-0/snpEff.jar")
-snpeff_config = os.path.join(config["annotation"], "snpeff-5.2-0/snpEff.config")
+
 binSize = config["binSize"]
 qual= config["qual"]
 chrs= config["chrs"]
 
 gcwig=config["ichorCNA_gcWig"]
 mapwig=config["ichorCNA_mapWig"]
-maxCN=config["ichorCNA_maxCN"]
-includeHOMD=config["ichorCNA_includeHOMD"]
-chrs_ichorCNA=config["ichorCNA_chrs"]
-chrTrain=config["ichorCNA_chrTrain"]
-genomeStyle=config["ichorCNA_genomeStyle"]
-estimatePloidy=config["ichorCNA_estimatePloidy"]
-estimateNormal=config["ichorCNA_estimateNormal"]
-estimateClonality=config["ichorCNA_estimateClonality"]
-scStates=config["ichorCNA_scStates"]
 centromere=config["ichorCNA_centromere"]
-txnE=config["ichorCNA_txnE"]
-txnStrength=config["ichorCNA_txnStrength"]
 minMapScore=config["ichorCNA_minMapScore"]
-fracReadsChrYMale=config["ichorCNA_fracReadsInChrYForMale"]
-maxFracGenomeSubclone=config["ichorCNA_maxFracGenomeSubclone"]
-maxFracCNASubclone=config["ichorCNA_maxFracCNASubclone"]
-plotFileType=config["ichorCNA_plotFileType"]
-plotYlim=config["ichorCNA_plotYlim"]

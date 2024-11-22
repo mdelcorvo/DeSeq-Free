@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - bioconda
+  - r
+dependencies:
+  - conda-forge::r-base=4.3.3
+  - bioconda::r-ichorcna
+  - bioconda::bioconductor-genomicranges
+  - conda-forge::r-data.table
+  - r::r-tidyverse

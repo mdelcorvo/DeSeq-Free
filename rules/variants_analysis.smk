@@ -6,25 +6,22 @@
 #     3. Filtering somatic calls from Varscan2
 #     4. Extraction of shared variants (i.e. variants shared between plasma and tumour)
 #     5. Extraction of unique variants (i.e. variants not shared between plasma and tumour)
-##
-#     * Calling somatic variants with LoFreq
 #
-#     * Calling somatic variants with Freebayes
 ##########################################################################################
 
 ##########
 # Varscan2
 ##########
 
-
 rule mpileup:
     input:
         bam=f'{derived}/recal/{{sample_type}}.bam',
-        ref=f'{genome_data}/GRCh38.d1.vd1.fa',
+        ref=genome,
     output:
         pileup=f'{derived}/variant_calling/Varscan2/pileup/{{sample_type}}.pileup'
-    log: f'{logs}/{{sample_type}}/01_Varscan2.log'
-    benchmark: f'{benchmarks}/{{sample_type}}_Varscan2.txt'
+    conda: "../envs/qc/samtools.yaml"
+    log: f'{logs}/variant_calling/{{sample_type}}/mpileup.log'
+    benchmark: f'{benchmarks}/{{sample_type}}_mpileup.txt'
     threads: 1
     group: "variant_analysis"
     priority: 40
@@ -32,7 +29,7 @@ rule mpileup:
         """
         samtools mpileup \
         -q 2 -f {input.ref} \
-        {input.bam} > {output.pileup}
+        {input.bam} > {output.pileup} 2> {log}
 
         """
 
@@ -40,7 +37,6 @@ rule VarScan2:
     input:
         unpack(get_pileup)
     params:
-        varscan = "tools/VarScan.jar",
         plasma=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-plasma',
         tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor',
     output:
@@ -48,16 +44,18 @@ rule VarScan2:
         snp_tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.snp',
         indel_plasma=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-plasma.indel',
         indel_tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.indel'
+    conda: "../envs/variant_calling/varscan.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/VarScan2.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_VarScan2.txt'
     threads: 1
     priority: 40
     shell:
         """
-        java -Xmx16g -jar {params.varscan} somatic  {input.control}  {input.plasma} {params.plasma} --min-var-freq 0.01
+        varscan somatic  {input.control}  {input.plasma} {params.plasma} --min-var-freq 0.01
         
-        java -Xmx16g -jar {params.varscan} somatic  {input.control}  {input.tumor} {params.tumor} --min-var-freq 0.01
+        varscan somatic  {input.control}  {input.tumor} {params.tumor} --min-var-freq 0.01
 
         """
-
 
 rule VarScan2_process:
     input:
@@ -65,8 +63,6 @@ rule VarScan2_process:
         snp_tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.snp',
         indel_plasma=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-plasma.indel',
         indel_tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.indel'
-    params:
-        varscan = "tools/VarScan.jar"
     output:
         snp_plasma=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-plasma.snp.Somatic.hc',
         snp_tumor=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.snp.Somatic.hc',
@@ -76,14 +72,17 @@ rule VarScan2_process:
         snp_tumor_list=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.snp.Somatic.hc.list',
         indel_plasma_list=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-plasma.indel.Somatic.hc.list',
         indel_tumor_list=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.indel.Somatic.hc.list'
+    conda: "../envs/variant_calling/varscan.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/VarScan2_process.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_VarScan2_process.txt'
     threads: 1
     priority: 40
     shell:
         """
-        java -Xmx16g -jar {params.varscan} processSomatic {input.snp_plasma} --min-tumor-freq 0.01 --max-normal-freq 0.00
-        java -Xmx16g -jar {params.varscan} processSomatic {input.snp_tumor} --min-tumor-freq 0.01 --max-normal-freq 0.00
-        java -Xmx16g -jar {params.varscan} processSomatic {input.indel_plasma} --min-tumor-freq 0.01 --max-normal-freq 0.00
-        java -Xmx16g -jar {params.varscan} processSomatic {input.indel_tumor} --min-tumor-freq 0.01 --max-normal-freq 0.00
+        varscan processSomatic {input.snp_plasma} --min-tumor-freq 0.01 --max-normal-freq 0.00
+        varscan processSomatic {input.snp_tumor} --min-tumor-freq 0.01 --max-normal-freq 0.00
+        varscan processSomatic {input.indel_plasma} --min-tumor-freq 0.01 --max-normal-freq 0.00
+        varscan processSomatic {input.indel_tumor} --min-tumor-freq 0.01 --max-normal-freq 0.00
         
         awk 'BEGIN{{OFS="\t"}} NR!=1 {{print $1, $2, $2}}' {output.snp_plasma} > {output.snp_plasma_list}
         awk 'BEGIN{{OFS="\t"}} NR!=1 {{print $1, $2, $2}}' {output.snp_tumor} > {output.snp_tumor_list}
@@ -91,7 +90,6 @@ rule VarScan2_process:
         awk 'BEGIN{{OFS="\t"}} NR!=1 {{print $1, $2, $2}}' {output.indel_tumor} > {output.indel_tumor_list}
         
         """
-
 
 rule bam_readcount:
     input:
@@ -101,16 +99,15 @@ rule bam_readcount:
         indel_tumor_list=f'{derived}/variant_calling/Varscan2/raw/{{sample_calling}}/{{sample_calling}}-tumor.indel.Somatic.hc.list',
         bam_plasma=f'{derived}/recal/{{sample_calling}}-plasma.bam',
         bam_tumor=f'{derived}/recal/{{sample_calling}}-tumor.bam',
-        ref=f'{genome_data}/GRCh38.d1.vd1.fa'
-    params:
-        varscan="tools/VarScan.jar"
+        ref=genome
     output:
         snp_rc_plasma=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-plasma.somatic_hc.snp.readcount',
         snp_rc_tumor=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-tumor.somatic_hc.snp.readcount',
         indel_rc_plasma=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-plasma.somatic_hc.indel.readcount',
         indel_rc_tumor=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-tumor.somatic_hc.indel.readcount'
-    conda:
-        "../envs/bam_read-count.yaml"
+    conda: "../envs/variant_calling/bam_read-count.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/bam_readcount.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_bam_readcount.txt'
     threads: 1
     priority: 40
     shell:
@@ -142,8 +139,6 @@ rule VarScan2_filtering:
         snp_rc_tumor=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-tumor.somatic_hc.snp.readcount',
         indel_rc_plasma=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-plasma.somatic_hc.indel.readcount',
         indel_rc_tumor=f'{derived}/variant_calling/Varscan2/bam_readcount/{{sample_calling}}-tumor.somatic_hc.indel.readcount'
-    params:
-        varscan="tools/VarScan.jar"
     output:
         snp_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered',
         snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered',
@@ -151,15 +146,18 @@ rule VarScan2_filtering:
         indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered',
         snp_plasma_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered.edit',
         snp_tumor_edit=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.edit'
+    conda: "../envs/variant_calling/varscan.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/VarScan2_filtering.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_VarScan2_filtering.txt'
     threads: 1
     priority: 40
     shell:
         """
-        java -jar {params.varscan} fpfilter {input.snp_plasma} {input.snp_rc_plasma} --output-file {output.snp_plasma} --min-var-freq 0.01 --min-strandedness 0.0
-        java -jar {params.varscan} fpfilter {input.snp_tumor} {input.snp_rc_tumor} --output-file {output.snp_tumor} --min-var-freq 0.01 --min-strandedness 0.0
+        varscan fpfilter {input.snp_plasma} {input.snp_rc_plasma} --output-file {output.snp_plasma} --min-var-freq 0.01 --min-strandedness 0.0
+        varscan fpfilter {input.snp_tumor} {input.snp_rc_tumor} --output-file {output.snp_tumor} --min-var-freq 0.01 --min-strandedness 0.0
         
-        java -jar {params.varscan} fpfilter {input.indel_plasma} {input.indel_rc_plasma} --output-file {output.indel_plasma} --min-var-freq 0.01 --min-strandedness 0.0
-        java -jar {params.varscan} fpfilter {input.indel_tumor} {input.indel_rc_tumor} --output-file {output.indel_tumor} --min-var-freq 0.01 --min-strandedness 0.0
+        varscan fpfilter {input.indel_plasma} {input.indel_rc_plasma} --output-file {output.indel_plasma} --min-var-freq 0.01 --min-strandedness 0.0
+        varscan fpfilter {input.indel_tumor} {input.indel_rc_tumor} --output-file {output.indel_tumor} --min-var-freq 0.01 --min-strandedness 0.0
         
         awk '{{if($10 >= 5 && $6 == 0 && $5 + $6 >= 10 && $9 + $10 >= 10) {{print $0}} }}' {output.snp_plasma} > {output.snp_plasma_edit}
         awk '{{if($10 >= 5 && $6 == 0 && $5 + $6 >= 10 && $9 + $10 >= 10) {{print $0}} }}' {output.snp_tumor} > {output.snp_tumor_edit}
@@ -173,6 +171,8 @@ rule VarScan2_shared_variants:
     output:
         snp_shared=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.shared.snp',
         snp_unique=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma-tumor.unique.snp'
+    log: f'{logs}/variant_calling/{{sample_calling}}/VarScan2_shared_variants.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_VarScan2_shared_variants.txt'
     threads: 1
     priority: 40
     shell:
@@ -196,7 +196,7 @@ rule Varscan2_snp2vcf:
         indel_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.indel.fpfiltered',
         indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered',
     params:
-        vs_format_converter="scripts/vs_format_converter.py"
+        vs_format_converter="scripts/variant_calling/vs_format_converter.py"
     output:
         snp_plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.snp.fpfiltered.vcf.gz',
         snp_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.snp.fpfiltered.vcf.gz',
@@ -204,6 +204,9 @@ rule Varscan2_snp2vcf:
         indel_tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.indel.fpfiltered.vcf.gz',
         plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
         tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz'
+    conda: "../envs/variant_calling/tabix.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/Varscan2_snp2vcf.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_Varscan2_snp2vcf.txt'
     threads: 1
     priority: 40
     shell:
@@ -228,244 +231,42 @@ rule Varscan2_snp2vcf:
         
         """
 
-########
-# LoFreq
-########
-
-rule LoFreq:
-    input:
-        unpack(get_bam),
-        ref=f'{genome_data}/GRCh38.d1.vd1.fa',
-        known=config['dbsnp']
-    params:
-        plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_',
-        tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_',
-    output:
-        snp_plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_somatic_final_minus-dbsnp.snvs.vcf.gz',
-        snp_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.snvs.vcf.gz',
-        indel_plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
-        indel_tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.lofreq_somatic_final_minus-dbsnp.indels.vcf.gz',
-        plasma=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
-        tumor=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.vcf.gz'
-    conda:
-        "../envs/lofreq.yaml"
-    threads: config["ncores"]
-    priority: 40
-    shell:
-        """
-        lofreq somatic -n {input.control} -t {input.plasma} -f {input.ref} \
-        --threads {threads} -o {params.plasma} -d {input.known}
-        
-        lofreq somatic -n {input.control} -t {input.tumor} -f {input.ref} \
-        --threads {threads} -o {params.tumor} -d {input.known}
-        
-        vcf-concat {output.snp_plasma} {output.indel_plasma} | bgzip -c > {output.plasma}
-        
-        vcf-concat {output.snp_tumor} {output.indel_tumor} | bgzip -c > {output.tumor}
-        
-        """
-
-###########
-# Freebayes
-###########
-
-rule freebayes:
-    input:
-        unpack(get_bam),
-        ref=f'{genome_data}/GRCh38.d1.vd1.fa',
-        known=config['dbsnp']
-    params:
-        freebayes_somatic = "scripts/freebayes_somatic.sh",
-        tmp_plasma=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/tmp_plasma',
-        tmp_tumor=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/tmp_tumor',
-    output:
-        plasma=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.filtered.vcf.gz',
-        tumor=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.filtered.vcf.gz',
-        plasma_pass=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
-        tumor_pass=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.vcf.gz'
-    conda:
-        "../envs/fb_somatic.yaml"
-    threads: config["ncores"]
-    priority: 40
-    shell:
-        """
-        mkdir {params.tmp_plasma}
-        mkdir {params.tmp_tumor}
-        
-        {params.freebayes_somatic}  \
-        -t {input.tumor} -n {input.control} \
-        -f {input.ref} -d {params.tmp_tumor} -P {input.known} \
-        -c {threads} -v {output.tumor}
-        
-        {params.freebayes_somatic}  \
-        -t {input.plasma} -n {input.control} \
-        -f {input.ref} -d {params.tmp_plasma} -P {input.known} \
-        -c {threads} -v {output.plasma}
-        
-        bcftools view -f PASS {output.tumor} | bgzip -c > {output.tumor_pass}
-        
-        bcftools view -f PASS {output.plasma} | bgzip -c > {output.plasma_pass}
-        """
-
-rule vcf_rename:
-    input:
-        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz',
-        plasma_fb= f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.vcf.gz',
-    params:
-        sample='{sample_calling}'
-    output:
-        plasma_list_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.list.Varscan2.txt',
-        tumor_list_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.list.Varscan2.txt',
-        plasma_list_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.list.Freebayes.txt',
-        tumor_list_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.list.Freebayes.txt',
-        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.fixed.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.fixed.vcf.gz',
-        plasma_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.fixed.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.fixed.vcf.gz',
-    threads: 1
-    shell:
-        """
-
-        echo -e "Varscan2_{params.sample}_control\nVarscan2_{params.sample}_plasma"> {output.plasma_list_vs}
-        echo -e "Varscan2_{params.sample}_control\nVarscan2_{params.sample}_tumor"> {output.tumor_list_vs}
-        echo -e "Freebayes_{params.sample}_control\nFreebayes_{params.sample}_plasma"> {output.plasma_list_fb}
-        echo -e "Freebayes_{params.sample}_control\nFreebayes_{params.sample}_tumor"> {output.tumor_list_fb}
-        
-        zcat {input.plasma_vs} | bcftools reheader -s {output.plasma_list_vs} | bgzip -c > {output.plasma_vs}
-        zcat {input.tumor_vs} | bcftools reheader -s {output.tumor_list_vs} | bgzip -c > {output.tumor_vs}
-        zcat {input.plasma_fb} | bcftools reheader -s {output.plasma_list_fb} | bgzip -c > {output.plasma_fb}
-        zcat {input.tumor_fb} | bcftools reheader -s {output.tumor_list_fb} | bgzip -c > {output.tumor_fb}
-        
-        """
-
-
-rule vcf_annot:
-    input:
-        plasma_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.fixed.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.fixed.vcf.gz',
-        plasma_lf=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.vcf.gz',
-        tumor_lf=f'{derived}/variant_calling/LoFreq/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.vcf.gz',
-        plasma_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.fixed.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.fixed.vcf.gz'
-    output:
-        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
-        plasma_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.annot.vcf.gz',
-        tumor_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.annot.vcf.gz',
-        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz'
-    params:
-        snpeff_db=snpeff_db,
-        snpeff_config=snpeff_config
-    log: f'{logs}/{{sample_calling}}/01_snpEff.log'
-    threads: 1
-    shell:
-        """
-        java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.plasma_fb} 2>{log} | \
-              bgzip > {output.plasma_fb} 2>>{log}
-              
-        java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.tumor_fb} 2>{log} | \
-              bgzip > {output.tumor_fb} 2>>{log}
-              
-         java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.plasma_lf} 2>{log} | \
-              bgzip > {output.plasma_lf} 2>>{log}
-              
-         java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.tumor_lf} 2>{log} | \
-              bgzip > {output.tumor_lf} 2>>{log}
-              
-         java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.plasma_vs} 2>{log} | \
-              bgzip > {output.plasma_vs} 2>>{log}
-              
-         java -Xmx16g -jar  {params.snpeff_db} \
-              -c  {params.snpeff_config} \
-              -v GRCh38.99 {input.tumor_vs} 2>{log} | \
-              bgzip > {output.tumor_vs} 2>>{log}
-                                  
-        """
-
 rule comparison_Varscan2:
     input:
-        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz',
+        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
+        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz'
     output:
-        tabulate=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
-        summary=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.summary.txt',
-    log: f'{logs}/{{sample_calling}}/01_Varscan2.log'
-    benchmark: f'{benchmarks}/{{sample_calling}}_Varscan2.txt'
+        tabulate=f'{derived}/variant_calling/Varscan2/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
+        summary=f'{derived}/variant_calling/Varscan2/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.summary.txt',
+    conda: "../envs/variant_calling/vcftoolz.yaml"
+    log: f'{logs}/variant_calling/{{sample_calling}}/comparison_Varscan2.log'
+    benchmark: f'{benchmarks}/{{sample_calling}}_comparison_Varscan2.txt'
     threads: 1
     group: "variant_analysis"
     shell:
         """
         vcftoolz compare \
-        {input.plasma_vs} \
-        {input.tumor_vs} \
+        {input.plasma} \
+        {input.tumor} \
         --tabulate {output.tabulate} > {output.summary}
 
         """
 
-rule comparison_Freebayes:
+rule gather_calling_results:
     input:
-        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
+        plasma=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.vcf.gz',
+        tumor=f'{derived}/variant_calling/Varscan2/filtered/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.vcf.gz',
+        tabulate=f'{derived}/variant_calling/Varscan2/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
+        summary=f'{derived}/variant_calling/Varscan2/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.summary.txt'
     output:
-        tabulate=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.table.txt',
-        summary=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.summary.txt',
-    log: f'{logs}/{{sample_calling}}/01_Varscan2.log'
-    benchmark: f'{benchmarks}/{{sample_calling}}_Varscan2.txt'
-    threads: 1
-    group: "variant_analysis"
+        plasma=f'{final}/variant_calling/{{sample_calling}}/{{sample_calling}}-plasma.vcf.gz',
+        tumor=f'{final}/variant_calling/{{sample_calling}}/{{sample_calling}}-tumor.vcf.gz',
+        tabulate=f'{final}/variant_calling/{{sample_calling}}/{{sample_calling}}.plasma-tumor.snp.table.txt',
+        summary=f'{final}/variant_calling/{{sample_calling}}/{{sample_calling}}.plasma-tumor.summary.txt',
     shell:
         """
-        vcftoolz compare \
-        {input.plasma_fb} \
-        {input.tumor_fb} \
-        --tabulate {output.tabulate} > {output.summary}
-
-        """
-
-rule create_tables:
-    input:
-        tabulate_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}.Freebayes.snp.table.txt',
-        tabulate_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}.Varscan2.snp.table.txt',
-        plasma_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Freebayes.final.annot.vcf.gz',
-        tumor_fb=f'{derived}/variant_calling/Freebayes/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Freebayes.final.annot.vcf.gz',
-        plasma_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-plasma.LoFreq.final.annot.vcf.gz',
-        tumor_lf=f'{derived}/variant_calling/LoFreq/annotated/{{sample_calling}}/{{sample_calling}}-tumor.LoFreq.final.annot.vcf.gz',
-        plasma_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-plasma.Varscan2.final.annot.vcf.gz',
-        tumor_vs=f'{derived}/variant_calling/Varscan2/annotated/{{sample_calling}}/{{sample_calling}}-tumor.Varscan2.final.annot.vcf.gz'
-    params:
-        edit="scripts/edit_comparison.R",
-    output:
-        table=f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.txt',
-        summary=f'{derived}/variant_calling/{{sample_calling}}-tumor.plasma.stats.txt'
-    log: f'{logs}/{{sample_calling}}/create_tables.log'
-    benchmark: f'{benchmarks}/{{sample_calling}}/create_tables.txt'
-    threads: 1
-    shell:
-        """
-        Rscript --vanilla {params.edit} \
-        {input.tabulate_fb} \
-        {input.tabulate_vs} \ 
-        {input.tumor_lf} \
-        {input.plasma_lf} \
-        {input.tumor_fb} \
-        {input.plasma_fb} \
-        {input.tumor_vs} \
-        {input.plasma_vs} \
-        {output.table} \
-        {output.summary} \
-        2> {log}
-
+        cp {input.plasma} {output.plasma}
+        cp {input.tumor} {output.tumor}
+        cp {input.tabulate} {output.tabulate}
+        cp {input.summary} {output.summary}
         """

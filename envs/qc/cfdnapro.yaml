@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - bioconda
+  - r
+dependencies:
+  - conda-forge::r-base=4.3.3
+  - bioconda::bioconductor-cfdnapro
+  - conda-forge::r-scales
+  - conda-forge::r-ggpubr
+  - conda-forge::r-ggplot2
+  - conda-forge::r-dplyr
+  - r::r-tidyverse

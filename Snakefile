@@ -9,11 +9,13 @@ include: "rules/common.smk"
 include: "rules/qc.smk"
 include: "rules/align-fastq.smk"
 include: "rules/cna.smk"
-include: "rules/variants_analysis.smk"
+if config['variant_calling']:
+    include: "rules/variants_analysis.smk"
 
 
 rule all:
    input:
+       f'{final}/report/Processed_data_qc.html',
+       f'{final}/qc/qc.pdf',
        f'{final}/cna/plasma-tumor-shared.cna.txt',
-       expand(f'{derived}/qc/{{sample_type}}.sequencing-qc.txt',sample_type=s1["sample_type"]),
-       expand(f'{derived}/qc/coverage/{{sample_type}}.mosdepth.global.dist.txt',sample_type=s1["sample_type"])
+       expand(f'{final}/variant_calling/{{sample_calling}}/{{sample_calling}}.plasma-tumor.summary.txt',sample_calling=s2['sample']) if config['variant_calling'] else []

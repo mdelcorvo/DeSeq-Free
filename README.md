@@ -29,10 +29,31 @@ git clone https://github.com/mdelcorvo/DeSeq-Free.git
 cd DeSeq-Free && conda env create -f envs/workflow.yaml
 conda activate DeSeq-Free_workflow
 
-#edit config and meta file
-snakemake -j 8
+#edit config and prepare a (csv or excel) input file
+
+snakemake --use-conda \
+--config \
+input=inputfile.xlsx \
+output=../output_directory \
+genome=genome.fasta
 ```
 
+### Prepare reference genome and annotations
+  - Reference genome<br />
+    Users can obtain reference genome from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
+    ```
+    wget https://ftp.ensembl.org/pub/release-100/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
+    ```
+    
+- Index reference genome for bwa-mem2<br />
+    Prepare indexed genome for bwa-mem2 to boost mapping.  Refer to the [bwa-mem2 instruction](https://github.com/bwa-mem2/bwa-mem2).<br />
+    - Example code:
+      ```
+      ./bwa-mem2 index <in.fasta>
+      Where 
+      <in.fasta> is the path to reference sequence fasta file and 
+      ```
+      
 
 ## Documentation
 
