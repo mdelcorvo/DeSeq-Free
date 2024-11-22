@@ -39,9 +39,9 @@ genome=genome.fasta
 
 ### Prepare reference genome
   - Reference genome<br />
-    In order to use **DeSeq-Free**, a user need to download reference genome and index it. 
+    Before starting, a user need to download reference genome. 
 
-    It can be obtained from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
+    Download from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
     ```
     wget https://ftp.ensembl.org/pub/release-100/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
     ```
