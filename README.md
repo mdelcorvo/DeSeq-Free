@@ -38,9 +38,11 @@ output=../output_directory \
 genome=genome.fasta
 ```
 
-### Prepare reference genome and annotations
+### Prepare reference genome
   - Reference genome<br />
-    Users can obtain reference genome from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
+    In order to use **DeSeq-Free**, a users need to download reference genome and index it. 
+
+    Can be obtained from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
     ```
     wget https://ftp.ensembl.org/pub/release-100/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
     ```
