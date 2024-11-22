@@ -7,7 +7,7 @@ It is implemented such that alternative or similar analysis can be added or remo
 
 ## Contents
 
-- [Using the DeSeq-Free workflow](#using-the-snhichip-workflow)
+- [Using the DeSeq-Free workflow](#using-the-deseq-free-workflow)
 - [Documentation](#documentation)
 - [Input files](#input-files)
 - [Output files](#output-files)
