@@ -4,7 +4,6 @@
 aimed to analyze WGS of circulating cell-free DNA (cfDNA) in the plasma of cancer patients in a reproducible, automated, and partially contained manner. 
 It is implemented such that alternative or similar analysis can be added or removed. 
 
-<i> <h3> (Under development..) </h3> </i>
 
 ## Contents
 
@@ -40,9 +39,9 @@ genome=genome.fasta
 
 ### Prepare reference genome
   - Reference genome<br />
-    In order to use **DeSeq-Free**, a users need to download reference genome and index it. 
+    In order to use **DeSeq-Free**, a user need to download reference genome and index it. 
 
-    Can be obtained from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
+    It can be obtained from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
     ```
     wget https://ftp.ensembl.org/pub/release-100/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
     ```
