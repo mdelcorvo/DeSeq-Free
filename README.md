@@ -20,25 +20,20 @@ We assume that you already have conda installed, otherwise you can easily instal
 
 To install conda: https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html
 
-In order to ease the use of DeSeq-Free, we provide a yml file for conda with all required tools, including Snakemake. 
-```
-To use DeSeq-Free:
+* Input:
+  
+  metafile  (can be .xlsx or .csv) with raw fastq.gz data that looks as follows:
+  ```
+  sample, lane, fq1, fq2, type
+  
+  Sample1, lane1, S1_L001_R1_001.fastq.gz, S1_L001_R2_001.fastq.gz, 0
+  Sample1, lane2, S1_L002_R1_001.fastq.gz, S1_L002_R2_001.fastq.gz, 0
+  ```
+  Each row represents a single-end fastq file. Rows with the same sample identifier are considered technical replicates and will be automatically merged. ``` type ``` refers to sample type (0=
+  buffy coat, 1= plasma, 2=tumor).
 
-git clone https://github.com/mdelcorvo/DeSeq-Free.git
-cd DeSeq-Free && conda env create -f envs/workflow.yaml
-conda activate DeSeq-Free_workflow
-
-#edit config and prepare a (csv or excel) input file
-
-snakemake --use-conda \
---config \
-input=inputfile.xlsx \
-output=output_directory \
-genome=genome.fasta
-```
-
-### Prepare reference genome
   - Reference genome<br />
+   
     Before starting, a user need to download reference genome. 
 
     Download from [NCBI](https://www.ncbi.nlm.nih.gov/genome/guide/human/), [Ensembl](https://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/), or any other autorities
@@ -46,44 +41,30 @@ genome=genome.fasta
     wget https://ftp.ensembl.org/pub/release-100/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.toplevel.fa.gz
     ```
     
-- Index reference genome for bwa-mem2<br />
-    Prepare indexed genome for bwa-mem2 to boost mapping.  Refer to the [bwa-mem2 instruction](https://github.com/bwa-mem2/bwa-mem2).<br />
-    - Example code:
+    - Index reference genome for bwa-mem2<br />
+  
+      Prepare indexed genome for bwa-mem2 to boost mapping.  Refer to the [bwa-mem2 instruction](https://github.com/bwa-mem2/bwa-mem2).<br />
+      
+      Example code:
       ```
       ./bwa-mem2 index <in.fasta>
       Where 
       <in.fasta> is the path to reference sequence fasta file and 
       ```
       
+* Code:
 
-## Documentation
+  ```
+  git clone https://github.com/mdelcorvo/DeSeq-Free.git
+  cd DeSeq-Free && conda env create -f envs/workflow.yaml
+  conda activate DeSeq-Free_workflow
 
-The pipeline leverages several tools to QC DeSeq-Free library, create statistics/interactive report and calculate/annotate interaction matrices at different bin size: 
-[bwa mem](https://bio-bwa.sourceforge.net/bwa.shtml), [pairtools](https://pairtools.readthedocs.io/en/latest/index.html), [juicer](https://github.com/aidenlab/juicer), [cooler](https://cooler.readthedocs.io/en/latest/index.html),
-[pairix](https://github.com/4dn-dcic/pairix), [Macs2](https://hbctraining.github.io/Intro-to-ChIPseq/lessons/05_peak_calling_macs.html) and [FitHiChIP](https://ay-lab.github.io/FitHiChIP/html/index.html).
-
-You will need to specify the location of the `reference genome` (hg38) in fasta/fa format with bwa index.
-Use the parameter `genome_data` in the config file to add it.
-
-## Input files
-
-Users are required to provide a metadata file for running the **DeSeq-Free** workflow:
-
-- **metadata file**  – a _tab-delimited_  text  file  listing  the  name  of  the  samples,  the  sequencing  technology  and  the paths to raw paired FASTQ files
-
-| sample        | platform      |fq1     |fq2    |
-| ------------- |:-------------:| :-----:|:-----:|
-| Sample1       | ILLUMINA      | data/S1_1.fastq.gz |data/S1_2.fastq.gz |
-| Sample2       | ILLUMINA      | data/S2_1.fastq.gz |data/S2_2.fastq.gz |
-| Sample3       | ILLUMINA      | data/S3_1.fastq.gz |data/S3_2.fastq.gz |
-
-- **configuration file**
-
-The configuration file (`config.yaml`) contains all the paths to input, output and reference files and additional parameters to customize the pipeline and the performed tests. All of these need to be carefully specified in accordance with the specific experiment.
-
-**Important**: ALL relative paths will be interpreted relative to the directory where the Snakefile is located. Alternatively, you can use absolute paths.
-
-- **reference in a fasta file format**, e.g. hg38 with bwa index
+  snakemake --use-conda \
+  --config \
+  input=inputfile.xlsx \
+  output=output_directory \
+  genome=genome.fasta
+  ```
 
 ## Output files
 
