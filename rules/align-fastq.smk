@@ -171,7 +171,7 @@ rule bwa_mem:
             2> {log}   
             """
 
-if config['variant_calling']:
+if config['bqsr']:
     rule realignertargetcreator:
         input:
             bam=f'{derived}/alignments/{{sample_type}}.bam',

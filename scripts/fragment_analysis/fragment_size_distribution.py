@@ -59,7 +59,7 @@ def summarize_fragment_sizes_by_size(fragment_sizes, group_name, bam_file):
 
     Args:
         fragment_sizes (list): List of fragment sizes.
-        group_name (str): Name of the group (e.g., 'Normal' or 'Tumor').
+        group_name (str): Name of the group (e.g., 'Plasma' or 'Tumor').
         bam_file (str): Name of the BAM file.
 
     Returns:
@@ -78,7 +78,7 @@ def analyze_bams(bam_files, group_name):
 
     Args:
         bam_files (list): List of BAM file paths.
-        group_name (str): Name of the group (e.g., 'Normal' or 'Tumor').
+        group_name (str): Name of the group (e.g., 'Plasma' or 'Tumor').
 
     Returns:
         pd.DataFrame: Combined summary DataFrame for all BAM files in the group.
@@ -115,8 +115,8 @@ def plot_fragment_size_distribution(df, output_file):
 def main():
     parser = argparse.ArgumentParser(description="Analyze fragment size distributions from BAM files.")
     parser.add_argument(
-        "--normal_bam_list", type=str, required=True,
-        help="Path to a text file containing the list of BAM files for the normal cohort."
+        "--plasma_bam_list", type=str, required=True,
+        help="Path to a text file containing the list of BAM files for the plasma cohort."
     )
     parser.add_argument(
         "--tumor_bam_list", type=str, required=True,
@@ -133,15 +133,15 @@ def main():
     args = parser.parse_args()
 
     # Read BAM file paths
-    normal_bams = read_bam_list(args.normal_bam_list)
+    plasma_bams = read_bam_list(args.plasma_bam_list)
     tumor_bams = read_bam_list(args.tumor_bam_list)
 
     # Analyze both groups
-    normal_df = analyze_bams(normal_bams, "Normal")
+    plasma_df = analyze_bams(plasma_bams, "Plasma")
     tumor_df = analyze_bams(tumor_bams, "Tumor")
 
     # Combine data and save as CSV
-    combined_df = pd.concat([normal_df, tumor_df], ignore_index=True)
+    combined_df = pd.concat([plasma_df, tumor_df], ignore_index=True)
     combined_df.to_csv(args.output_csv, index=False)
     print(f"Results saved to {args.output_csv}")
 

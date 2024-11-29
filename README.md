@@ -1,7 +1,7 @@
 # DeSeq-Free <img src="img/DeSeq-Free_logo.png" width="200" align="right" />
 
 **DeSeq-Free** (Whole genome **De**ep **Seq**uencing analysis of Cell **Free** tumor DNA ) is a [Snakemake workflow](https://snakemake.readthedocs.io/en/stable/index.html), 
-aimed to analyze WGS of circulating cell-free DNA (cfDNA) in the plasma of cancer patients in a reproducible, automated, and partially contained manner. 
+aimed to analyze WGS of circulating cell-free DNA (cfDNA) in the plasma of cancer patients together with their matched germline and tumour samples in a reproducible, automated, and partially contained manner. 
 It is implemented such that alternative or similar analysis can be added or removed. 
 
 
@@ -33,7 +33,7 @@ conda activate DeSeq-Free_workflow
 snakemake --use-conda \
 --config \
 input=inputfile.xlsx \
-output=../output_directory \
+output=output_directory \
 genome=genome.fasta
 ```
 

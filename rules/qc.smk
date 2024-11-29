@@ -178,28 +178,6 @@ rule cfDNAPro :
         {log}
         """
 
-rule fragment_analysis :
-    input:
-        metrics=expand(f'{derived}/qc/picard/{{experiment}}/{{sample_calling}}.{{experiment}}.insert_size_metrics.txt',sample_calling=s2['sample'],experiment=["plasma", "tumor", "control"]),
-    output:
-        fragment_size_dist=f'{derived}/qc/cfDNAPro/fragment_size_dist.tiff',
-        median_size=f'{derived}/qc/cfDNAPro/median_size_dist.tiff'
-    params:
-        cfDNAPro="scripts/qc/cfDNAPro.R",
-        sample_dir=f'{derived}/qc/picard/'
-    conda: "../envs/qc/cfdnapro.yaml"
-    log: f'{logs}/qc/cfDNAPro.log'
-    benchmark: f'{benchmarks}/cfDNAPro.txt'
-    threads: 1
-    shell:
-        """
-        Rscript --vanilla {params.cfDNAPro} \
-        {params.sample_dir} \
-        {output.fragment_size_dist} \
-        {output.median_size} \
-        {log}
-        """
-
 rule multiqc:
     input:
         fragment_size_dist = f'{derived}/qc/cfDNAPro/fragment_size_dist.tiff',

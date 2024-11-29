@@ -4,13 +4,14 @@
 input:  # (.xlsx OR .csv) metafile with fastq path.
 output: # Set the OUTPUT directory
 genome: # Ref genome indexed with bwa mem2
-ncores: 34 # Number of cores
+ncores: 16 # Number of cores
 ##################
 
 ##################
 variant_calling: false
-dbsnp: /data/delcorvo/tools/dbsnp138.vcf.gz
-dbsnp_tbi: /data/delcorvo/tools/dbsnp138.vcf.gz.tbi
+bqsr: true
+dbsnp:
+dbsnp_tbi:
 ##################
 
 ########################
